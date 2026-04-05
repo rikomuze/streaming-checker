@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MAZZEL 配信購入チェッカー</title>
+  <meta property="og:title" content="MAZZEL 配信購入チェッカー" />
+  <meta property="og:description" content="配信の購入判断と視聴忘れ防止をまとめて管理。予算、期限、出演情報、セトリを一度に確認できます。" />
+  <meta property="og:type" content="website" />
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --bg1: #170d16;
+      --bg2: #10090f;
+      --panel: #1a111b;
+      --panel-2: #211326;
+      --panel-3: rgba(255,255,255,0.04);
+      --line: rgba(255,255,255,0.08);
+      --text: #f4eff8;
+      --muted: #c4b8cc;
+      --accent: #9d7cf0;
+      --accent-2: #7d5ce0;
+      --green: #37c978;
+      --orange: #ffb454;
+      --shadow: 0 14px 36px rgba(0,0,0,0.32);
+    }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(157,124,240,0.14), transparent 34%),
+        linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px 64px;
+    }
+    .hero {
+      background: linear-gradient(180deg, rgba(157,124,240,0.14), rgba(157,124,240,0.04));
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: 0.02em;
+    }
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .notice {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--panel-3);
+      border: 1px solid var(--line);
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 20px;
+      align-items: start;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 22px;
+      font-weight: 800;
+    }
+    .card {
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 18px;
+      padding: 16px;
+      background: rgba(255,255,255,0.02);
+      margin-bottom: 14px;
+    }
+    .card:last-child { margin-bottom: 0; }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 8px;
+    }
+    .card-title {
+      font-size: 19px;
+      font-weight: 800;
+      line-height: 1.4;
+    }
+    .card-price {
+      white-space: nowrap;
+      font-size: 24px;
+      font-weight: 800;
+    }
+    .tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+    }
+    .tag.free { background: rgba(55, 201, 120, 0.14); color: #caffe2; border-color: rgba(55,201,120,0.25); }
+    .tag.paid { background: rgba(157,124,240,0.16); color: #eadfff; border-color: rgba(157,124,240,0.28); }
+    .tag.special { background: rgba(255,180,84,0.14); color: #ffe6be; border-color: rgba(255,180,84,0.25); }
+    .meta-list {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .meta-list strong { color: var(--text); }
+    .status-box {
+      margin-top: 10px;
+      display: grid;
+      gap: 10px;
+    }
+    .status-label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .status-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .status-btn {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.18s ease;
+    }
+    .status-btn:hover,
+    .action-btn:hover,
+    .setlist-btn:hover,
+    .copy-btn:hover,
+    .link-btn:hover {
+      transform: translateY(-1px);
+      opacity: 0.95;
+    }
+    .status-btn.active {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border-color: transparent;
+      color: #fff;
+    }
+    .status-btn.active.done {
+      background: linear-gradient(135deg, var(--green), #2ea865);
+    }
+    .status-btn.active.watch {
+      background: linear-gradient(135deg, var(--orange), #f29c2b);
+      color: #24160a;
+    }
+    .setlist-btn {
+      margin-top: 12px;
+      border: none;
+      background: rgba(255,255,255,0.09);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .link-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 12px;
+      margin-right: 8px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .setlist {
+      margin-top: 10px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      display: none;
+      font-size: 14px;
+    }
+    .setlist.open { display: block; }
+    .setlist ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .summary-box {
+      display: grid;
+      gap: 12px;
+    }
+    .summary-card {
+      border-radius: 18px;
+      padding: 16px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+    }
+    .summary-label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .summary-value {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+    .summary-sub {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .notice-list {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(255, 180, 84, 0.11);
+      border: 1px solid rgba(255,180,84,0.24);
+      font-size: 13px;
+      color: #ffe6be;
+      display: none;
+    }
+    .notice-list.show { display: block; }
+    .notice-title {
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #fff0cf;
+    }
+    .breakdown {
+      margin-top: 16px;
+      border-top: 1px solid var(--line);
+      padding-top: 16px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px dashed rgba(255,255,255,0.08);
+      font-size: 14px;
+    }
+    .copy-wrap {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    .copy-btn, .action-btn {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #fff;
+    }
+    .copy-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    }
+    .action-btn {
+      background: rgba(255,255,255,0.09);
+      color: var(--text);
+    }
+    .helper {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+.schedule-group {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed rgba(255,255,255,0.08);
+}
+.schedule-group:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.schedule-group-title {
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.schedule-item {
+  margin-bottom: 8px;
+}
+.schedule-item:last-child {
+  margin-bottom: 0;
+}
+.schedule-title {
+  color: var(--text);
+  font-weight: 700;
+}
+.schedule-time {
+  font-size: 12px;
+  color: #e7dcf2;
+}
+.schedule-archive {
+  font-size: 12px;
+  color: var(--muted);
+}
+    
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .container { padding: 16px 12px 48px; }
+      h1 { font-size: 24px; }
+      .card-head { flex-direction: column; gap: 8px; }
+      .card-price { font-size: 20px; }
+      .summary-value { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="hero">
+      <h1>MAZZEL 配信購入チェッカー</h1>
+      <p class="sub">購入判断と視聴忘れ防止をまとめて管理できる配信チェック用ページです。</p>
+      <div class="notice">
+        <strong>使い方</strong><br>
+        ・「観る予定 / 購入済み / 視聴済み」で配信ごとに整理できます。<br>
+        ・予算には「観る予定」「購入済み」の有料配信のみ反映されます。<br>
+        ・無料配信と特典視聴は、視聴管理用としてまとめています。
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="panel">
+        <h2 class="section-title">有料配信</h2>
+        <div id="normalList"></div>
+
+        <h2 class="section-title" style="margin-top:24px;">無料・特典視聴</h2>
+        <div id="specialList"></div>
+      </section>
+
+      <aside class="panel">
+        <h2 class="section-title">まとめ</h2>
+        <div class="summary-box">
+          <div class="summary-card">
+            <div class="summary-label">有料予算</div>
+            <div class="summary-value" id="budgetTotal">¥0</div>
+            <div class="summary-sub" id="budgetSub">観る予定・購入済みの有料配信を集計</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">配信の整理状況</div>
+            <div class="summary-value" id="statusCount">0件</div>
+            <div class="summary-sub" id="statusSub">まだ整理されていません</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">視聴スケジュール</div>
+            <div id="scheduleList" class="summary-sub">まだ選択されていません</div>
+          </div>
+        </div>
+
+        <div class="notice-list" id="deadlineBox">
+          <div class="notice-title">見逃し注意</div>
+          <div id="deadlineList"></div>
+        </div>
+
+        <div class="breakdown" id="breakdown"></div>
+
+        <div class="copy-wrap">
+          <button class="copy-btn" id="copyBtn">結果をコピー</button>
+          <button class="action-btn" id="resetBtn">リセット</button>
+        </div>
+
+        <p class="helper">
+          VS超特急の見逃し期限は未確認のため、いったん「未定」で表示します。<br>
+          平安神宮は手数料込み表示も併記しています。
+        </p>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const items = [
+      {
+        id: 'dunk-day1',
+        section: 'normal',
+        title: 'D.U.N.K DAY1',
+        date: '4/11(土) 18:00〜',
+        platform: 'Hulu',
+       link: 'https://www.hulu.jp/store/dunk-showcase-in-k-arena-yokohama-2026-day1',
+        price: 4800,
+        fee: 0,
+        priceLabel: '¥4,800',
+        archive: '4/26(日) 23:59まで',
+        saleEnd: '4/26(日) 20:00まで',
+        tags: ['有料', 'Hulu'],
+        cast: 'MAZZELとしてのグループ出演はなし / DA PUMPコラボ企画：KAIRYU・RAN・SEITO・RYUKI・TAKUTO',
+        setlist: []
+      },
+      {
+        id: 'heian-jingu',
+        section: 'normal',
+        title: '平安神宮',
+        date: '4/19(日) 19:00〜',
+        platform: 'ZAIKO',
+        link: 'https://motherbase.zaiko.io/e/mazzel2026',
+        price: 4800,
+        fee: 608,
+        priceLabel: '¥4,800（+手数料¥608）',
+        archive: '4/28(火) 23:59まで',
+        saleEnd: '4/28(火) 22:00まで',
+        tags: ['有料', 'ZAIKO'],
+        cast: '3/21開催公演の配信',
+        details: '奉納 Special Liveの配信。',
+        setlist: ['DANGER','J.O.K.E.R.','HERO SUIT','Vivid','CAME TO DANCE','Waterfall','K&K','Trap','Fantasy','Only You','Seaside Story','Holiday','King Kila Game','Parade']
+      },
+      {
+        id: 'dunk-day2',
+        section: 'normal',
+        title: 'D.U.N.K DAY2',
+        date: '4/25(土) 18:00〜',
+        platform: 'Hulu',
+       link: 'https://www.hulu.jp/store/dunk-showcase-in-k-arena-yokohama-2026-day2',
+        price: 4800,
+        fee: 0,
+        priceLabel: '¥4,800',
+        archive: '5/10(日) 23:59まで',
+        saleEnd: '5/10(日) 20:00まで',
+        tags: ['有料', 'Hulu'],
+        cast: 'MAZZEL出演あり / BUSコラボ企画：NAOYA・HAYATO',
+        details: 'MAZZEL本編出演あり。',
+        setlist: ['DANGER','K＆K','Trap','Only You','J.O.K.E.R.']
+      },
+      {
+        id: 'dunk-day3',
+        section: 'normal',
+        title: 'D.U.N.K DAY3',
+        date: '5/9(土) 18:00〜',
+        platform: 'Hulu',
+       link: 'https://www.hulu.jp/store/dunk-showcase-in-k-arena-yokohama-2026-day3',
+        price: 4800,
+        fee: 0,
+        priceLabel: '¥4,800',
+        archive: '5/24(日) 23:59まで',
+        saleEnd: '5/24(日) 20:00まで',
+        tags: ['有料', 'Hulu'],
+        cast: 'MAZZELとしてのグループ出演はなし / ENDLICHERIコラボ企画：KAIRYU・EIKI',
+        details: 'MAZZELの本編出演はなく、コラボ企画のみ。',
+        setlist: []
+      },
+      {
+        id: 'vs-bullet-train',
+        section: 'normal',
+        title: 'VS超特急',
+        date: '5/9(土) 18:30〜',
+        platform: 'Hulu',
+        link: 'https://www.hulu.jp/store/vsbullet-train',
+        price: 3500,
+        fee: 0,
+        priceLabel: '¥3,500',
+        archive: '未定',
+        saleEnd: '未定',
+        tags: ['有料', 'Hulu'],
+        cast: 'Hulu独占配信 / 見逃し配信あり / ダンス企画出演あり',
+        details: '価格は3,500円で確定。見逃し終了日は未定。',
+        setlist: ['DANGER','Trap','HERO SUIT','Only You','J.O.K.E.R']
+      },
+      {
+        id: 'the-performance',
+        section: 'special',
+        title: 'The Performance',
+        date: '4/11(土) 17:00〜',
+        platform: 'ABEMA',
+        link: 'https://abema.tv/',
+        price: 0,
+        fee: 0,
+        priceLabel: '無料',
+        archive: '未定',
+        saleEnd: 'なし',
+        tags: ['無料', 'ABEMA'],
+        cast: 'セトリ未定',
+        details: '無料・ABEMA生配信。購入判断対象ではなく、視聴管理寄りで扱う。',
+        setlist: []
+      },
+     {
+  id: 'only-you-mini-live',
+  section: 'special',
+  title: 'Only You シリアル特典ミニライブ',
+  date: '4/7(火) 12:00〜 公開',
+  platform: 'UNIVERSAL MUSIC STORE特典',
+  link: 'https://store-annex.universal-music.co.jp/Login.jsp',
+  price: 0,
+  fee: 0,
+  priceLabel: '購入対象外',
+  archive: '6/9(火) 23:59まで',
+  saleEnd: '予約期間終了済み',
+  tags: ['特典視聴'],
+  cast: '期間限定動画視聴 / 対象者向け',
+  details: '新規購入判断用ではなく、視聴忘れ防止用。',
+  setlist: ['DANGER','J.O.K.E.R.','CAME TO DANCE','Only You']
+}
+    ];
+
+   
+const STATUS_NORMAL = ['観る予定', '購入済み', '視聴済み'];
+const STATUS_SPECIAL = ['視聴予定', '視聴済み'];
+    const state = {};
+
+    items.forEach(item => {
+      state[item.id] = '';
+    });
+
+    const normalList = document.getElementById('normalList');
+    const specialList = document.getElementById('specialList');
+    const budgetTotal = document.getElementById('budgetTotal');
+    const statusCount = document.getElementById('statusCount');
+    const statusSub = document.getElementById('statusSub');
+    const breakdown = document.getElementById('breakdown');
+    const deadlineBox = document.getElementById('deadlineBox');
+    const deadlineList = document.getElementById('deadlineList');
+    const scheduleList = document.getElementById('scheduleList');
+    const copyBtn = document.getElementById('copyBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function yen(num) {
+      return '¥' + Number(num).toLocaleString('ja-JP');
+    }
+
+    function getStatusList(item) {
+      return item.section === 'special' ? STATUS_SPECIAL : STATUS_NORMAL;
+    }
+
+    function renderTags(item) {
+      return item.tags.map(tag => {
+        let cls = '';
+        if (tag === '無料') cls = 'free';
+        else if (tag === '有料') cls = 'paid';
+        else if (tag === '特典視聴') cls = 'special';
+        return `<span class="tag ${cls}">${tag}</span>`;
+      }).join('');
+    }
+
+    function renderStatusButtons(item) {
+      return getStatusList(item).map(label => {
+        const active = state[item.id] === label;
+        let extraClass = '';
+        if (label === '視聴済み') extraClass = 'done';
+        if (label === '購入済み' || label === '視聴予定') extraClass = 'watch';
+        return `<button type="button" class="status-btn ${active ? 'active ' + extraClass : ''}" onclick="setStatus('${item.id}','${label}')">${label}</button>`;
+      }).join('');
+    }
+
+    function renderSetlist(item) {
+      if (!item.setlist || item.setlist.length === 0) {
+        return `<div class="setlist" id="setlist-${item.id}">セトリ情報なし</div>`;
+      }
+      return `
+        <div class="setlist" id="setlist-${item.id}">
+          <ol>
+            ${item.setlist.map(song => `<li>${song}</li>`).join('')}
+          </ol>
+        </div>
+      `;
+    }
+
+    function renderCard(item) {
+      return `
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-title">${item.title}</div>
+              <div class="tags">${renderTags(item)}</div>
+            </div>
+            <div class="card-price">${item.priceLabel}</div>
+          </div>
+          <div class="meta-list">
+            <div><strong>日時：</strong>${item.date}</div>
+            <div><strong>配信：</strong>${item.platform}</div>
+            <div><strong>販売終了：</strong>${item.saleEnd}</div>
+            <div><strong>視聴期限：</strong>${item.archive}</div>
+            <div><strong>補足：</strong>${item.cast}</div>
+          
+          </div>
+          <div class="status-box">
+            <div class="status-label">状態を選ぶ</div>
+            <div class="status-buttons">${renderStatusButtons(item)}</div>
+          </div>
+          <div>
+            <a class="link-btn" href="${item.link}" target="_blank" rel="noopener noreferrer">配信ページを開く</a>
+            <button type="button" class="setlist-btn" onclick="toggleSetlist('${item.id}')">セトリを見る</button>
+          </div>
+          ${renderSetlist(item)}
+        </article>
+      `;
+    }
+
+    function renderLists() {
+      normalList.innerHTML = items.filter(item => item.section === 'normal').map(renderCard).join('');
+      specialList.innerHTML = items.filter(item => item.section === 'special').map(renderCard).join('');
+    }
+
+    function setStatus(id, label) {
+      state[id] = state[id] === label ? '' : label;
+      update();
+    }
+
+    function toggleSetlist(id) {
+      const box = document.getElementById('setlist-' + id);
+      box.classList.toggle('open');
+    }
+
+    function getBudgetRows() {
+      return items.filter(item => item.section === 'normal' && (state[item.id] === '観る予定' || state[item.id] === '購入済み') && item.price > 0);
+    }
+
+    function getTrackedRows() {
+      return items.filter(item => state[item.id]);
+    }
+
+   function getDeadlineRows() {
+  return items.filter(item => (
+    (
+      state[item.id] === '観る予定' ||
+      state[item.id] === '購入済み' ||
+      state[item.id] === '視聴予定'
+    ) &&
+    state[item.id] !== '視聴済み'
+  ));
+}
+function parseScheduleDate(dateText) {
+  const match = dateText.match(/(\d+)\/(\d+)\([^)]*\)\s*(\d+):(\d+)/);
+  if (!match) {
+    return {
+      sortKey: '2026-99-99 99:99',
+      dayLabel: dateText,
+      timeLabel: ''
+    };
+  }
+
+  const month = match[1].padStart(2, '0');
+  const day = match[2].padStart(2, '0');
+  const hour = match[3].padStart(2, '0');
+  const minute = match[4].padStart(2, '0');
+
+  const dayMatch = dateText.match(/\(([^)]*)\)/);
+  const weekday = dayMatch ? dayMatch[1] : '';
+
+  return {
+    sortKey: `2026-${month}-${day} ${hour}:${minute}`,
+    dayLabel: `${match[1]}/${match[2]}(${weekday})`,
+    timeLabel: `${match[3]}:${match[4]}〜`
+  };
+}
+ function getScheduleRows() {
+  return items
+    .filter(item => {
+      if (item.section === 'normal') {
+        return state[item.id] === '観る予定' || state[item.id] === '購入済み';
+      }
+      return state[item.id] === '視聴予定';
+    })
+    .map(item => {
+      const parsed = parseScheduleDate(item.date);
+      return {
+        title: item.title,
+        date: item.date,
+        archive: item.archive,
+        dayLabel: parsed.dayLabel,
+        timeLabel: parsed.timeLabel,
+        sortKey: parsed.sortKey
+      };
+    })
+    .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+}
+    
+
+    function updateSummary() {
+      const budgetRows = getBudgetRows();
+      const total = budgetRows.reduce((sum, item) => sum + item.price + (item.id === 'heian-jingu' ? item.fee : 0), 0);
+      budgetTotal.textContent = yen(total);
+
+      const tracked = getTrackedRows();
+      statusCount.textContent = tracked.length + '件';
+      statusSub.textContent = tracked.length === 0 ? 'まだ整理されていません' : tracked.map(item => `${item.title}：${state[item.id]}`).join(' / ');
+
+  const scheduleRows = getScheduleRows();
+
+if (scheduleRows.length === 0) {
+  scheduleList.innerHTML = 'まだ選択されていません';
+} else {
+  const grouped = {};
+
+  scheduleRows.forEach(item => {
+    if (!grouped[item.dayLabel]) {
+      grouped[item.dayLabel] = [];
+    }
+    grouped[item.dayLabel].push(item);
+  });
+
+  scheduleList.innerHTML = Object.entries(grouped).map(([dayLabel, entries]) => {
+    return `<div class="schedule-group">
+      <div class="schedule-group-title">${dayLabel}</div>
+      ${entries.map(item => `
+        <div class="schedule-item">
+          <div class="schedule-title">${item.title}</div>
+          <div class="schedule-time">${item.timeLabel}</div>
+          <div class="schedule-archive">期限：${item.archive}</div>
+        </div>
+      `).join('')}
+    </div>`;
+  }).join('');
+}
+
+      if (budgetRows.length === 0) {
+        breakdown.innerHTML = '<div class="row"><span>まだ予算に入っている配信はありません</span><span>—</span></div>';
+      } else {
+        breakdown.innerHTML = '<div class="row" style="font-weight:700;"><span>予算内訳</span><span>金額</span></div>' +
+          budgetRows.map(item => {
+            const actual = item.price + (item.id === 'heian-jingu' ? item.fee : 0);
+            return `<div class="row"><span>${item.title}</span><span>${yen(actual)}</span></div>`;
+          }).join('');
+      }
+
+      const deadlineRows = getDeadlineRows();
+      if (deadlineRows.length === 0) {
+        deadlineBox.classList.remove('show');
+        deadlineList.innerHTML = '';
+      } else {
+        deadlineBox.classList.add('show');
+        deadlineList.innerHTML = deadlineRows.map(item => `<div>・${item.title}（${item.archive}）</div>`).join('');
+      }
+    }
+
+    function update() {
+      renderLists();
+      updateSummary();
+    }
+
+    copyBtn.addEventListener('click', async () => {
+      const budgetRows = getBudgetRows();
+      const tracked = getTrackedRows();
+      const total = budgetRows.reduce((sum, item) => sum + item.price + (item.id === 'heian-jingu' ? item.fee : 0), 0);
+
+      const text = [
+        '【MAZZEL 配信購入チェッカー】',
+        ...(tracked.length
+          ? tracked.map(item => `・${item.title}：${state[item.id]}`)
+          : ['・まだ整理中']),
+        '',
+        '【予算】',
+        ...(budgetRows.length
+          ? budgetRows.map(item => `・${item.title}：${yen(item.price + (item.id === 'heian-jingu' ? item.fee : 0))}`)
+          : ['・まだ未選択']),
+        `合計：${yen(total)}`
+      ].join('\n');
+
+      try {
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = 'コピーしました';
+        setTimeout(() => {
+          copyBtn.textContent = '結果をコピー';
+        }, 1600);
+      } catch (e) {
+        alert('コピーに失敗しました。');
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      items.forEach(item => {
+        state[item.id] = '';
+      });
+      update();
+    });
+
+    window.setStatus = setStatus;
+    window.toggleSetlist = toggleSetlist;
+
+    update();
+  </script>
+</body>
+</html>
